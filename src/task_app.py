@@ -17,22 +17,22 @@ class TooDoo:
         self.tasks = []
         self.commands = ["add", "delete", "edit", "checkbox", "-a"]
 
-    def add(self, topic):
-        if topic == "add": 
+    def add(self, command):
+        if command == "add":
             if len(self.argv) < 3:
                 title = input("Task: ")
 
-                return title
-
-            title = " ".join(self.argv[2:])
-            
-            return title
-        
-        elif topic == "description":
+            else:
+                title = " ".join(self.argv[2:])
+                
             description = input("Description: ")
 
-            return description
+            return title, description
+        
+        title = self.argv[2]
+        description = self.argv[3]
 
+        return title, description
 
     def delete(self, task_id): 
         ...
@@ -57,9 +57,9 @@ class TooDoo:
             return
         
         command = self.argv[1]
-        if command == "add":
-            task.title       = self.add("add")
-            task.description = self.add("description")
+        if command in ["add", "-a"]:
+            task.title, task.description = self.add(command)
+
 
 
 def main():
