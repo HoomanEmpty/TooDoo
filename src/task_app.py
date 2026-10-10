@@ -1,5 +1,7 @@
 import sys
 import datetime
+import storage
+
 class Task:
     def __init__(self, title=None, description=None):
         self.title = title
@@ -45,6 +47,12 @@ class TooDoo:
 
     def run(self):
         task = Default()
+        
+        task_dict = {
+            "title"      :None,
+            "description":None,
+            "adding date":None,
+        }
 
         if len(self.argv) < 2:
             print("Usage: task <command>")
@@ -60,6 +68,12 @@ class TooDoo:
         if command in ["add", "-a"]:
             task.title, task.description = self.add(command)
 
+            task_dict["title"] = task.title
+            task_dict["description"] = task.description
+            task_dict["adding date"] = task.adding_date
+
+            storage.save(task_dict)
+            
 
 
 def main():
