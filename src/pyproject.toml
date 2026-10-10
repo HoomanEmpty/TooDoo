@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "TooDoo"
+version = "0.0.1"
+
+[project.scripts]
+task = "task_app:main"
+
+[tool.setuptools]
+py-modules = ["task_app", "input_handler"]
