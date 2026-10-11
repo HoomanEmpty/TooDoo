@@ -17,7 +17,7 @@ class TooDoo:
     def __init__(self, argv):
         self.argv = argv
         self.tasks = []
-        self.commands = ["add", "delete", "edit", "checkbox", "-a"]
+        self.commands = ["add", "delete", "edit", "checkbox", "-a", "show"]
 
     def add(self, command):
         if command == "add":
@@ -39,12 +39,24 @@ class TooDoo:
     def delete(self, task_id): 
         ...
     
-    def edit(self, task_id): 
-        ...
+    def edit(self, command): 
+        if len(self.argv) < 3:
+            ...
+
     
     def checkbox(self, task_id): 
         ...
 
+    def show(self):
+        task_list = storage.load()
+        for task_index in range(len(task_list)):
+
+            print(f'{task_index+1}-', end="")
+            print(task_list[task_index]["title"], end="\t\t")
+            print(task_list[task_index]["description"])
+            print()
+        
+    
     def run(self):
         task = Default()
         
@@ -73,6 +85,13 @@ class TooDoo:
             task_dict["adding date"] = task.adding_date
 
             storage.save(task_dict)
+
+        elif command == "show":
+            self.show()
+
+        elif command == "edit":
+            self.show()
+            self.edit()
             
 
 
