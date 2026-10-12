@@ -1,6 +1,7 @@
 import sys
 import datetime
 import storage
+import input_handler
 
 class Task:
     def __init__(self, title=None, description=None):
@@ -17,7 +18,7 @@ class TooDoo:
     def __init__(self, argv):
         self.argv = argv
         self.tasks = []
-        self.commands = ["add", "delete", "edit", "checkbox", "-a", "show"]
+        self.commands = ["add", "delete", "edit", "checkbox", "-a", "show", "del"]
 
     def add(self, command):
         if command == "add":
@@ -36,12 +37,24 @@ class TooDoo:
 
         return title, description
 
-    def delete(self, task_id): 
-        ...
+    def delete(self): 
+        if len(self.argv) < 3:
+            self.show()
+            user_choice = input_handler.input_handler(question="Which task do you want to delete: ", Type="int", options=[storage.load("len")], default=0)
+
+            if user_choice == 0:
+                return
+
+            else:
+                tasks = storage.load()
+                del tasks[user_choice-1]
+                storage.save(tasks)
+
     
     def edit(self, command): 
         if len(self.argv) < 3:
-            ...
+            self.show()
+            user_choice = input_handler.input_handler(question="Wich task you want edit: ", Type=int, options=[storage.load("len")], default=0)
 
     
     def checkbox(self, task_id): 
@@ -92,7 +105,9 @@ class TooDoo:
         elif command == "edit":
             self.show()
             self.edit()
-            
+
+        elif command in ["delete", "del"]:
+            self.delete()
 
 
 def main():

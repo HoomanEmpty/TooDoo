@@ -10,4 +10,4 @@ version = "0.0.1"
 task = "task_app:main"
 
 [tool.setuptools]
-py-modules = ["task_app", "storage"]
+py-modules = ["task_app", "storage", "input_handler"]
