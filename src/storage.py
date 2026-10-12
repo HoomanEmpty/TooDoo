@@ -32,11 +32,17 @@ def load(what_you_want="task"):
         with open(path) as file:
             task_list = json.loads(file.read())
 
-        if what_you_want == "task":
-            return task_list
+        match what_you_want:
+            case "task":
+                return task_list
 
-        elif what_you_want == "len":
-            return len(task_list)
+            case "len":
+                return len(task_list)
+
+            case "title":
+                task_title_list = [task["title"] for task in task_list]
+
+                return task_title_list
 
     elif not task_list:
         print("No task is here!!!")
