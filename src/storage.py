@@ -1,11 +1,13 @@
 import json
 from pathlib import Path
 
+file_name = "tasks.txt"
+
 def save(task):
-    tasks = []
+    tasks = []    
     path = Path.home() / ".config/TooDoo"
     path.mkdir(parents=False, exist_ok=True)
-    path = path / "tasks.md"
+    path = path / file_name
 
     if path.exists():
         task_list = load()
@@ -24,7 +26,7 @@ def save(task):
             file.write(tasks)
 
 def load(what_you_want="task"):
-    path = Path.home() / ".config/TooDoo/tasks.md"
+    path = Path.home() / ".config/TooDoo/" / file_name
 
     if path.exists():
         with open(path) as file:
