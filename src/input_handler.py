@@ -1,4 +1,4 @@
-def input_handler(question = "Value", Type = "str", low_high = (-9.9e100, 9.9e100, "[]"), options = [], default = "", auto_prevention = "lower", rsls = "rsls", rewrite=(), autofill = True):
+def input_handler(question = "Value", Type = "str", low_high = (-9.9e100, 9.9e100, "[]"), options = [], default = "", auto_prevention = "lower", rsls = "rsls", rewrite=(), autofill = True, option_error_massage = f"\nThe answer was not exepted! - Expected answer(s): "):
     data_type = {
         "str" : str,
         "float" : float,
@@ -7,8 +7,7 @@ def input_handler(question = "Value", Type = "str", low_high = (-9.9e100, 9.9e10
 
     while True:
         try:
-            answer = input(f"{question}")
-            
+            answer = input(question)
             if answer:
 
                 if Type == "int" or Type == "float":
@@ -18,6 +17,33 @@ def input_handler(question = "Value", Type = "str", low_high = (-9.9e100, 9.9e10
             
                         elif len(options) == 2:
                             options = [number for number in range(options[0], options[1] + 1)]
+
+                else:
+                    if autofill:
+                        if len(options) == 1:
+                            if type(options[0]) == list:
+                                options = [title for title in options[0]]
+
+                            else:
+                                options = [str(number) for number in range(options[0] + 1)]
+
+                        elif len(options) == 2:
+                            if type(options[0]) == list or type(options[1]) == list:
+
+                                if type(options[0]) == list:
+                                    backup_options = [str(number) for number in range(options[1] + 1)]
+                                    options = backup_options + [title for title in options[0]]
+
+                                else:
+                                    backup_options = [str(number) for number in range(options[0] + 1)]
+                                    options = backup_options + [title for title in options[1]]
+
+                            else:
+                                options = [str(number) for number in range(options[0], options[1] + 1)] 
+
+                        elif len(options) == 3:
+                            backup_options = [str(number) for number in range(options[0], options[1] + 1)]
+                            options = backup_options + [title for title in options[2]]
 
                 match Type:
                     case "str":
@@ -45,11 +71,11 @@ def input_handler(question = "Value", Type = "str", low_high = (-9.9e100, 9.9e10
                             answer = answer.replace(rewrite[0], rewrite[1])
 
                         
-                            if answer in options or not options:
-                                return answer
+                        if answer in options or not options:
+                            return answer
 
-                            else:
-                                print("\nThe answer was not exepted!", "Expected answer(s): ", [option for option in options])
+                        else:
+                            print(option_error_massage, [option for option in options])
 
                     case "int" | "float":
                         answer = data_type[Type](answer)
@@ -60,7 +86,7 @@ def input_handler(question = "Value", Type = "str", low_high = (-9.9e100, 9.9e10
                                     return answer
                                 
                                 else:
-                                    print("\nThe answer was not exepted!", "Expected asnwer(s): ", [option for option in options])
+                                    print(option_error_massage, [option for option in options])
 
                             else:
                                 print(f"\nOut of range! Please enter a value between [{low_high[0]}, {low_high[1]}]\n")
@@ -71,7 +97,7 @@ def input_handler(question = "Value", Type = "str", low_high = (-9.9e100, 9.9e10
                                     return answer
 
                                 else:
-                                    print("\nThe answer was not exepted!", "Expected asnwer(s): ", [option for option in options])
+                                    print(option_error_massage, [option for option in options])
 
                             else:
                                 print(f"\nOut of range! Please enter a value between ({low_high[0]}, {low_high[1]})\n")
