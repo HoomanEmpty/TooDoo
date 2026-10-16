@@ -18,7 +18,7 @@ class TooDoo:
     def __init__(self, argv):
         self.argv = argv
         self.tasks = []
-        self.commands = ["add", "delete", "edit", "checkbox", "-a", "show", "del"]
+        self.commands = ["add", "delete", "edit", "checkbox", "-a", "show", "del", "-d", "mv", "move"]
 
     def add(self, command):
         if command == "add":
@@ -37,18 +37,53 @@ class TooDoo:
 
         return title, description
 
-    def delete(self): 
+
+    def delete(self):
+        tasks = storage.load()
+        titles = storage.load("title")
+
         if len(self.argv) < 3:
             self.show()
-            user_choice = input_handler.input_handler(question="Which task do you want to delete: ", Type="int", options=[storage.load("len")], default=0)
+            user_choice = input_handler.input_handler(question="Which task do you want to delete: ", Type="str", options=[storage.load("len"), storage.load("title")], auto_prevention="", default=0, option_error_massage="\n This task doesn't exist!! - Expected tasks: ")
+            
+            try:
+                user_choice = int(user_choice)
+                if user_choice == 0:
+                    return
+                
+                del tasks[user_choice - 1]
+                storage.save(tasks)
+                return
+                
+            except:
+                for task_index in range(len(tasks)):
+                    if user_choice == tasks[task_index]["title"]:
+                        del tasks[task_index]
+                        storage.save(tasks)
+                        return
 
-            if user_choice == 0:
+        else:
+            task_title = " ".join(self.argv[2:])
+
+            if task_title == "0":
+                return
+            
+            for task_index in range(len(tasks)):
+                if task_title == tasks[task_index]["title"]:
+                    del tasks[task_index]
+                    storage.save(tasks)
+                    return
+
+            try:        
+                del tasks[int(self.argv[2]) - 1]
+                storage.save(tasks)
                 return
 
-            else:
-                tasks = storage.load()
-                del tasks[user_choice-1]
-                storage.save(tasks)
+            except:
+                print("This task doesn't exist!!")
+                return
+
+        
 
     
     def edit(self, command): 
@@ -106,7 +141,7 @@ class TooDoo:
             self.show()
             self.edit()
 
-        elif command in ["delete", "del"]:
+        elif command in ["delete", "del", "-d"]:
             self.delete()
 
 
