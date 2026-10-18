@@ -26,24 +26,70 @@ def save(task):
             tasks = json.dumps(task)
             file.write(tasks)
 
-def backup():
-    path = Path.home() / ".config/TooDoo"
-    path.mkdir(parents=False, exist_ok=True)
-    path = path / file_name
+def backup(command):
+    if command == "-b":
+        path = Path.home() / ".config/TooDoo/tasks.txt"
+        save_path = Path.home() / "TooDoo.backup.Jaraare"
+        shutil.copy2(path, save_path)
+        print(f"Backup is saved in {save_path / "TooDoo.backup.Jaraare"}")
+        return
 
-    if path.exists():
-        shutil.copy2(path, Path.home() / "TooDoo.backup.Jaraare")
+    while True:
+        save_path = input("Where you want save your backup: ")
+        if not save_path:
+            save_path = Path.home()
 
-    else:
-        print("Files doesn't exist!!!")
+        elif save_path[0] == "~":
+            save_path = save_path.replace("~", str(Path.home()), 1)
+            save_path = Path(save_path)
 
-def imp():
-    path = Path.home() / "TooDoo.backup.Jaraare"
-    if path.exists():
-        shutil.move(path, Path.home() / ".config/TooDoo/tasks.txt")
+        elif save_path == "0":
+            return
+        
+        else:
+            save_path = Path(save_path)
 
-    else:
-        print("File doesn't exist!!!")
+        path = Path.home() / ".config/TooDoo/tasks.txt"
+        if save_path.exists():
+            shutil.copy2(path, save_path / "TooDoo.backup.Jaraare")
+
+            print(f"Backup is saved in {save_path / "TooDoo.backup.Jaraare"}")
+            return
+
+        else:
+            print("Path doesn't exist!!!")
+
+def imp(command):
+    if command == "-i":
+        save_path = Path.home() / "TooDoo.backup.Jaraare"
+        shutil.move(save_path, Path.home() / ".config/TooDoo/tasks.txt")
+        print("Import succsed!!")
+        return
+    
+    while True:
+        save_path = input("Where your backup are saved: ")
+        if not save_path:
+            save_path = Path.home()
+
+        elif save_path[0] == "~":
+            save_path = save_path.replace("~", str(Path.home()), 1)
+            save_path = Path(save_path)
+
+        elif save_path == "0":
+            return
+
+        else:
+            save_path = Path(save_path)
+
+        save_path = save_path / "TooDoo.backup.Jaraare"
+        if save_path.exists():
+            shutil.move(save_path, Path.home() / ".config/TooDoo/tasks.txt")
+
+            print("Import succsed!!")
+            return
+
+        else:
+            print("File doesn't exist!!!")
 
 def load(what_you_want="task"):
     path = Path.home() / ".config/TooDoo/" / file_name

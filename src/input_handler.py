@@ -1,4 +1,4 @@
-def input_handler(question = "Value", Type = "str", low_high = (-9.9e100, 9.9e100, "[]"), options = [], default = "", auto_prevention = "lower", rsls = "rsls", rewrite=(), autofill = True, option_error_massage = f"\nThe answer was not exepted! - Expected answer(s): "):
+def input_handler(question = "Value", Type = "str", low_high = (-9.9e100, 9.9e100, "[]"), options = [], default = "", auto_prevention = "", rsls = "", rewrite=(), autofill = True, option_error_massage = f"\nThe answer was not exepted! - Expected answer(s): "):
     data_type = {
         "str" : str,
         "float" : float,

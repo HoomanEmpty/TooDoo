@@ -297,10 +297,10 @@ class TooDoo:
             self.checkbox(command)
 
         elif command in self.commands["backup"]:
-            storage.backup()
+            storage.backup(command)
 
         elif command in self.commands["import"]:
-            storage.imp()
+            storage.imp(command)
 
 def main():
     TooDoo(sys.argv).run()
