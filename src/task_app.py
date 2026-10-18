@@ -23,7 +23,9 @@ class TooDoo:
                          "edit":["edit"],
                          "checkbox":["check", "done", "uncheck", "undone"],
                          "move":["move", "mv"],
-                         "show":["show"]}
+                         "show":["show"],
+                         "backup":["backup", "bc", "-b", "export"],
+                         "import":["import", "-i"]}
 
     def add(self, command, called_with_edit = (False,)):
         if not called_with_edit[0]:
@@ -294,6 +296,11 @@ class TooDoo:
         elif command in self.commands["checkbox"]:
             self.checkbox(command)
 
+        elif command in self.commands["backup"]:
+            storage.backup()
+
+        elif command in self.commands["import"]:
+            storage.imp()
 
 def main():
     TooDoo(sys.argv).run()

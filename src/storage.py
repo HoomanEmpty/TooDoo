@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import shutil
 
 file_name = "tasks.txt"
 
@@ -24,6 +25,25 @@ def save(task):
         with path.open("w", encoding="utf-8") as file:
             tasks = json.dumps(task)
             file.write(tasks)
+
+def backup():
+    path = Path.home() / ".config/TooDoo"
+    path.mkdir(parents=False, exist_ok=True)
+    path = path / file_name
+
+    if path.exists():
+        shutil.copy2(path, Path.home() / "TooDoo.backup.Jaraare")
+
+    else:
+        print("Files doesn't exist!!!")
+
+def imp():
+    path = Path.home() / "TooDoo.backup.Jaraare"
+    if path.exists():
+        shutil.move(path, Path.home() / ".config/TooDoo/tasks.txt")
+
+    else:
+        print("File doesn't exist!!!")
 
 def load(what_you_want="task"):
     path = Path.home() / ".config/TooDoo/" / file_name
