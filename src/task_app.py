@@ -18,7 +18,12 @@ class TooDoo:
     def __init__(self, argv):
         self.argv = argv
         self.tasks = []
-        self.commands = ["add", "delete", "edit", "-a", "show", "del", "-d", "mv", "move", "check", "done", "uncheck", "undone"]
+        self.commands = {"add":["add", "-a"],
+                         "remove":["delete", "del", "-d", "rm", "remove"],
+                         "edit":["edit"],
+                         "checkbox":["check", "done", "uncheck", "undone"],
+                         "move":["move", "mv"],
+                         "show":["show"]}
 
     def add(self, command):
         if command == "add":
@@ -205,14 +210,15 @@ class TooDoo:
             print("Usage: task <command>")
             return
         
-        elif not(self.argv[1] in self.commands):
+        else:
+            for cmd in self.commands:
+                if self.argv[1] in cmd:
+                    command = self.argv[1]
+                    break
+
             print(self.argv[1].rstrip() + " command not found!!")
 
-            return
-        
-        command = self.argv[1]
-
-        if command in ["add", "-a"]:
+        if command in self.commands["add"]:
             task.title, task.description = self.add(command)
 
             task_dict["title"] = task.title
@@ -221,17 +227,16 @@ class TooDoo:
 
             storage.save(task_dict)
 
-        elif command == "show":
+        elif command in self.commands["show"]:
             self.show()
 
-        elif command == "edit":
-            self.show()
+        elif command in self.commands["edit"]:
             self.edit()
 
-        elif command in ["delete", "del", "-d"]:
+        elif command in self.commands["remove"]:
             self.delete()
 
-        elif command in ["check", "done", "uncheck", "undone"]:
+        elif command in self.commands["checkbox"]:
             self.checkbox(command)
 
 
