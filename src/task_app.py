@@ -25,20 +25,33 @@ class TooDoo:
                          "move":["move", "mv"],
                          "show":["show"]}
 
-    def add(self, command):
-        if command == "add":
-            if len(self.argv) < 3:
-                title = input("Task: ")
+    def add(self, command, called_with_edit = (False,)):
+        if not called_with_edit[0]:
+            if command == "add":
+                if len(self.argv) < 3:
+                    title = input("Task: ")
 
-            else:
-                title = " ".join(self.argv[2:])
-                
-            description = input("Description: ")
+                else:
+                    title = " ".join(self.argv[2:])
+                    
+                description = input("Description: ")
+
+                return title, description
+            
+            title = self.argv[2]
+            description = self.argv[3]
 
             return title, description
+
+        title = input(f"{called_with_edit[1]} change to: ")
         
-        title = self.argv[2]
-        description = self.argv[3]
+        if not title:
+            title = called_with_edit[1]
+
+        description = input(f"Enter description: ")
+
+        if not description:
+            description = called_with_edit[2]
 
         return title, description
 
@@ -87,10 +100,48 @@ class TooDoo:
                 print("This task doesn't exist!!")
                 return
 
-    def edit(self, command): 
+    def edit(self): 
+        tasks = storage.load()
         if len(self.argv) < 3:
             self.show()
-            user_choice = input_handler.input_handler(question="Wich task you want edit: ", Type=int, options=[storage.load("len")], default=0)
+            user_choice = input_handler.input_handler(question="Which task do you want to edit: ", Type="str", options=[storage.load("len"), storage.load("title")], auto_prevention="", default=0, option_error_massage="\n This task doesn't exist!! - Expected tasks: ")
+            
+            try:
+                user_choice = int(user_choice)
+                if user_choice == 0:
+                    return
+                    
+                tasks[user_choice - 1]["title"], tasks[user_choice - 1]["description"] = self.add("", called_with_edit=(True, tasks[user_choice - 1]["title"], tasks[user_choice - 1]["description"]))
+                storage.save(tasks)
+                return
+                    
+            except:
+                for task_index in range(len(tasks)):
+                    if user_choice == tasks[task_index]["title"]:
+                        tasks[task_index]["title"], tasks[task_index]["description"] = self.add("", called_with_edit=(True, tasks[task_index]["title"], tasks[task_index]["description"]))
+                        storage.save(tasks)
+                        return
+
+        else:
+            task_title = " ".join(self.argv[2:])
+
+            if task_title == "0":
+                return
+                
+            for task_index in range(len(tasks)):
+                if task_title == tasks[task_index]["title"]:
+                    tasks[task_index]["title"], tasks[task_index]["description"] = self.add("", called_with_edit=(True, tasks[task_index]["title"], tasks[task_index]["description"]))
+                    storage.save(tasks)
+                    return
+
+            try:        
+                tasks[int(self.argv[2]) - 1]["title"], tasks[int(self.argv[2]) - 1]["description"] = self.add("", called_with_edit=(True, tasks[int(self.argv[2]) - 1]["title"], tasks[int(self.argv[2]) - 1]["description"]))
+                storage.save(tasks)
+                return
+
+            except:
+                print("This task doesn't exist!!")
+                return
 
     
     def checkbox(self, command): 
@@ -211,12 +262,16 @@ class TooDoo:
             return
         
         else:
-            for cmd in self.commands:
+            it_is = False
+            for cmd in self.commands.values():
                 if self.argv[1] in cmd:
                     command = self.argv[1]
+                    it_is = True
                     break
 
-            print(self.argv[1].rstrip() + " command not found!!")
+            if not it_is:
+                print(self.argv[1].rstrip() + " command not found!!")
+                return
 
         if command in self.commands["add"]:
             task.title, task.description = self.add(command)
