@@ -22,10 +22,10 @@ class TooDoo:
                          "remove":["delete", "del", "-d", "rm", "remove"],
                          "edit":["edit"],
                          "checkbox":["check", "done", "uncheck", "undone"],
-                         "move":["move", "mv"],
+                         "move":["move", "mv", "amove", "amv"],
                          "show":["show"],
                          "backup":["backup", "bc", "-b", "export"],
-                         "import":["import", "-i"]}
+                         "import":["import", "-i"],}
 
     def add(self, command, called_with_edit = (False,)):
         if not called_with_edit[0]:
@@ -246,6 +246,75 @@ class TooDoo:
 
             print(task_list[task_index]["description"])
             print()
+
+    def move(self):
+        tasks = storage.load()
+        titles = storage.load("title")
+
+        if len(self.argv) < 3:
+            self.show()
+            user_choice = input_handler.input_handler(question="Which task do you want to move: ", Type="str", options=[storage.load("len"), storage.load("title")], auto_prevention="", default=0, option_error_massage="\n This task doesn't exist!! - Expected tasks: ")
+            position = input_handler.input_handler(question="Where you want put your task: ", Type="str", options=[storage.load("len"), storage.load("title")], auto_prevention="", default=0, option_error_massage="\n This task doesn't exist!! - Expected tasks:")            
+            
+            try:
+                user_choice = int(user_choice)
+                if user_choice == 0:
+                    return
+                
+                try:
+                    position = int(position)
+                    tasks.insert(position - 1, tasks.pop(user_choice - 1))
+                    storage.save(tasks)
+                    return
+                
+                except:
+                    tasks.insert(titles.index(position), tasks.pop(user_choice - 1))
+                    storage.save(tasks)
+                    return
+            except:
+                try:
+                    position = int(position)
+                    tasks.insert(position - 1, tasks.pop(tasks.index(user_choice)))
+                    storage.save(tasks)
+                    return
+                
+                except:
+                    tasks.insert(titles.index(position), tasks.pop(tasks.index(user_choice)))
+                    storage.save(tasks)
+                    return
+        else:
+            if self.argv[2] == "0":
+                return
+
+            user_choice = self.argv[2]
+            position = self.argv[3]
+
+            try:
+                user_choice = int(user_choice)
+                
+                try:
+                    position = int(position)
+                    tasks.insert(position - 1, tasks.pop(user_choice - 1))
+                    storage.save(tasks)
+                    return
+
+                except:
+                    tasks.insert(titles.index(position), tasks.pop(user_choice - 1))
+                    storage.save(tasks)
+                    return
+                    
+            except:
+                try:
+                    position = int(position)
+                    tasks.insert(position - 1, tasks.pop(tasks.index(user_choice)))
+                    storage.save(tasks)
+                    return
+
+                except:
+                    tasks.insert(titles.index(position), tasks.pop(tasks.index(user_choice)))
+                    storage.save(tasks)
+                    return
+                    
         
     
     def run(self):
@@ -301,6 +370,9 @@ class TooDoo:
 
         elif command in self.commands["import"]:
             storage.imp(command)
+
+        elif command in self.commands["move"]:
+            self.move()
 
 def main():
     TooDoo(sys.argv).run()
