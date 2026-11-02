@@ -255,7 +255,11 @@ class TooDoo:
             self.show()
             user_choice = input_handler.input_handler(question="Which task do you want to move: ", Type="str", options=[storage.load("len"), storage.load("title")], auto_prevention="", default=0, option_error_massage="\n This task doesn't exist!! - Expected tasks: ")
             position = input_handler.input_handler(question="Where you want put your task: ", Type="str", options=[storage.load("len"), storage.load("title")], auto_prevention="", default=0, option_error_massage="\n This task doesn't exist!! - Expected tasks:")            
-            
+
+        else:
+            user_choice = self.argv[2]
+            position = self.argv[3]
+
             try:
                 user_choice = int(user_choice)
                 if user_choice == 0:
@@ -263,57 +267,77 @@ class TooDoo:
                 
                 try:
                     position = int(position)
-                    tasks.insert(position - 1, tasks.pop(user_choice - 1))
+                    if self.argv[1] == "amove" or self.argv[1] == "amv":
+                        tasks[user_choice - 1], tasks[position - 1] = tasks[position - 1], tasks[user_choice - 1]
+                        storage.save(tasks)
+                    else:                    
+                        tasks.insert(position - 1, tasks.pop(user_choice - 1))
+
                     storage.save(tasks)
                     return
                 
                 except:
-                    tasks.insert(titles.index(position), tasks.pop(user_choice - 1))
+                    if self.argv[1] == "amove" or self.argv[1] == "amv":
+                        tasks[user_choice - 1], tasks[titles.index(position)] = tasks[titles.index(position)], tasks[user_choice - 1]
+
+                    else:
+                        tasks.insert(titles.index(position), tasks.pop(user_choice - 1))
+
                     storage.save(tasks)
                     return
             except:
                 try:
                     position = int(position)
-                    tasks.insert(position - 1, tasks.pop(tasks.index(user_choice)))
+                    if self.argv[1] == "amove" or self.argv[1] == "amv":
+                        tasks[titles.index(user_choice)], tasks[position - 1] = tasks[position - 1], tasks[titles.index(user_choice)]
+
+                    else:
+                        tasks.insert(position - 1, tasks.pop(titles.index(user_choice)))
+
                     storage.save(tasks)
                     return
                 
                 except:
-                    tasks.insert(titles.index(position), tasks.pop(tasks.index(user_choice)))
+                    if self.argv[1] == "amove" or self.argv[1] == "amv":
+                        tasks[titles.index(user_choice)], tasks[titles.index(position)] = tasks[titles.index(position)], tasks[titles.index(user_choice)]
+
+                    else:
+                        tasks.insert(titles.index(position), tasks.pop(titles.index(user_choice)))
+
                     storage.save(tasks)
                     return
-        else:
-            if self.argv[2] == "0":
-                return
+        # else:
+        #     if self.argv[2] == "0":
+        #         return
 
-            user_choice = self.argv[2]
-            position = self.argv[3]
+        #     user_choice = self.argv[2]
+        #     position = self.argv[3]
 
-            try:
-                user_choice = int(user_choice)
+        #     try:
+        #         user_choice = int(user_choice)
                 
-                try:
-                    position = int(position)
-                    tasks.insert(position - 1, tasks.pop(user_choice - 1))
-                    storage.save(tasks)
-                    return
+        #         try:
+        #             position = int(position)
+        #             tasks.insert(position - 1, tasks.pop(user_choice - 1))
+        #             storage.save(tasks)
+        #             return
 
-                except:
-                    tasks.insert(titles.index(position), tasks.pop(user_choice - 1))
-                    storage.save(tasks)
-                    return
+        #         except:
+        #             tasks.insert(titles.index(position), tasks.pop(user_choice - 1))
+        #             storage.save(tasks)
+        #             return
                     
-            except:
-                try:
-                    position = int(position)
-                    tasks.insert(position - 1, tasks.pop(tasks.index(user_choice)))
-                    storage.save(tasks)
-                    return
+        #     except:
+        #         try:
+        #             position = int(position)
+        #             tasks.insert(position - 1, tasks.pop(titles.index(user_choice)))
+        #             storage.save(tasks)
+        #             return
 
-                except:
-                    tasks.insert(titles.index(position), tasks.pop(tasks.index(user_choice)))
-                    storage.save(tasks)
-                    return
+        #         except:
+        #             tasks.insert(titles.index(position), tasks.pop(titles.index(user_choice)))
+        #             storage.save(tasks)
+        #             return
                     
         
     
