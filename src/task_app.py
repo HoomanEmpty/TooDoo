@@ -1,402 +1,259 @@
+"""TooDoo - a to-do list manager for the terminal.
+
+Entry point: ``task <command> [arguments]`` (see ``TooDoo.commands`` for the
+list of commands and their aliases).
+"""
 import sys
-import datetime
-import storage
+from datetime import datetime
+
+import display
 import input_handler
+import storage
+
+DATE_FORMAT = "%Y-%m-%d %a %H:%M:%S"
+
 
 class Task:
+    """Base task: a title, a description and a done flag."""
+
     def __init__(self, title=None, description=None):
         self.title = title
         self.description = description
         self.done = False
 
+    def to_dict(self):
+        """The task as a plain dict, ready to be saved as JSON."""
+        return {
+            "title": self.title,
+            "description": self.description,
+            "task_done": self.done,
+            "task_id": None,
+        }
+
+
 class Default(Task):
-    def __init__(self, title=None, description=None, adding_date=datetime.datetime.now().strftime("%Y-%m-%d %a %H:%M:%S")):
+    """A normal task; it also remembers when it was added."""
+
+    def __init__(self, title=None, description=None, adding_date=None):
         super().__init__(title, description)
-        self.adding_date = adding_date
+        # Evaluated when the task is created (not once at import time).
+        self.adding_date = adding_date or datetime.now().strftime(DATE_FORMAT)
+
+    def to_dict(self):
+        data = super().to_dict()
+        data["adding date"] = self.adding_date
+        return data
+
 
 class TooDoo:
     def __init__(self, argv):
         self.argv = argv
-        self.tasks = []
-        self.commands = {"add":["add", "-a"],
-                         "remove":["delete", "del", "-d", "rm", "remove"],
-                         "edit":["edit"],
-                         "checkbox":["check", "done", "uncheck", "undone"],
-                         "move":["move", "mv", "amove", "amv"],
-                         "show":["show"],
-                         "backup":["backup", "bc", "-b", "export"],
-                         "import":["import", "-i"],}
 
-    def add(self, command, called_with_edit = (False,)):
-        if not called_with_edit[0]:
-            if command == "add":
-                if len(self.argv) < 3:
-                    title = input("Task: ")
+        # command group -> all the words that trigger it
+        self.commands = {"add": ["add", "-a"],
+                         "remove": ["delete", "del", "-d", "rm", "remove"],
+                         "edit": ["edit"],
+                         "checkbox": ["check", "done", "uncheck", "undone"],
+                         "move": ["move", "mv", "amove", "amv"],
+                         "show": ["show"],
+                         "backup": ["backup", "bc", "-b", "export"],
+                         "import": ["import", "-i"]}
 
-                else:
-                    title = " ".join(self.argv[2:])
-                    
-                description = input("Description: ")
+    # ------------------------------------------------------------------
+    # Helpers shared by several commands
+    # ------------------------------------------------------------------
 
-                return title, description
-            
-            title = self.argv[2]
-            description = self.argv[3]
+    @staticmethod
+    def _ask(question, tasks):
+        """Ask the user for a task number or title. Enter returns "0" (cancel)."""
+        return input_handler.input_handler(
+            question=question,
+            options=[len(tasks), [task["title"] for task in tasks]],
+            default="0",
+            option_error_message="\n This task doesn't exist!! - Expected tasks: ")
 
-            return title, description
+    @staticmethod
+    def _resolve(tasks, choice):
+        """Turn a title or a 1-based number into a list index.
 
-        title = input(f"{called_with_edit[1]} change to: ")
-        
-        if not title:
-            title = called_with_edit[1]
+        Returns None if the user cancelled ("0") or the task doesn't exist.
+        """
+        if choice == "0":
+            return None
 
-        description = input(f"Enter description: ")
+        for index, task in enumerate(tasks):
+            if task["title"] == choice:
+                return index
 
-        if not description:
-            description = called_with_edit[2]
+        try:
+            number = int(choice)
+        except ValueError:
+            number = 0
+
+        if 1 <= number <= len(tasks):
+            return number - 1
+
+        print("This task doesn't exist!!")
+        return None
+
+    def _pick(self, tasks, action):
+        """Find the task a command works on.
+
+        The task comes from the command line (``task del 2`` or
+        ``task del Some title``); if it isn't given, the list is shown and
+        the user is asked. Returns a list index or None.
+        """
+        if not tasks:
+            print("No task added!!!")
+            return None
+
+        if len(self.argv) < 3:
+            self.show()
+            choice = self._ask(f"Which task do you want to {action}: ", tasks)
+        else:
+            choice = " ".join(self.argv[2:])
+
+        return self._resolve(tasks, choice)
+
+    # ------------------------------------------------------------------
+    # Commands
+    # ------------------------------------------------------------------
+
+    def _read_new_task(self, command):
+        """Get the title and description of a new task.
+
+        ``task add [title]``       -> missing values are asked for
+        ``task -a title desc``     -> both values come from the command line
+        """
+        argv = self.argv
+
+        if command == "add":
+            title = " ".join(argv[2:]) if len(argv) > 2 else input("Task: ")
+            description = input("Description: ")
+        else:
+            title = argv[2] if len(argv) > 2 else input("Task: ")
+            description = argv[3] if len(argv) > 3 else input("Description: ")
 
         return title, description
 
+    @staticmethod
+    def _read_edited_task(old_title, old_description):
+        """Ask for a new title and description; Enter keeps the old value."""
+        title = input(f"{old_title} change to: ") or old_title
+        description = input("Enter description: ") or old_description
+
+        return title, description
+
+    def add(self, command):
+        title, description = self._read_new_task(command)
+        storage.append(Default(title, description).to_dict())
 
     def delete(self):
         tasks = storage.load()
+        index = self._pick(tasks, "delete")
+        if index is None:
+            return
 
-        if len(self.argv) < 3:
-            self.show()
-            user_choice = input_handler.input_handler(question="Which task do you want to delete: ", Type="str", options=[storage.load("len"), storage.load("title")], auto_prevention="", default=0, option_error_massage="\n This task doesn't exist!! - Expected tasks: ")
-            
-            try:
-                user_choice = int(user_choice)
-                if user_choice == 0:
-                    return
-                
-                del tasks[user_choice - 1]
-                storage.save(tasks)
-                return
-                
-            except:
-                for task_index in range(len(tasks)):
-                    if user_choice == tasks[task_index]["title"]:
-                        del tasks[task_index]
-                        storage.save(tasks)
-                        return
+        del tasks[index]
+        storage.save(tasks)
 
-        else:
-            task_title = " ".join(self.argv[2:])
-
-            if task_title == "0":
-                return
-            
-            for task_index in range(len(tasks)):
-                if task_title == tasks[task_index]["title"]:
-                    del tasks[task_index]
-                    storage.save(tasks)
-                    return
-
-            try:        
-                del tasks[int(self.argv[2]) - 1]
-                storage.save(tasks)
-                return
-
-            except:
-                print("This task doesn't exist!!")
-                return
-
-    def edit(self): 
+    def edit(self):
         tasks = storage.load()
-        if len(self.argv) < 3:
-            self.show()
-            user_choice = input_handler.input_handler(question="Which task do you want to edit: ", Type="str", options=[storage.load("len"), storage.load("title")], auto_prevention="", default=0, option_error_massage="\n This task doesn't exist!! - Expected tasks: ")
-            
-            try:
-                user_choice = int(user_choice)
-                if user_choice == 0:
-                    return
-                    
-                tasks[user_choice - 1]["title"], tasks[user_choice - 1]["description"] = self.add("", called_with_edit=(True, tasks[user_choice - 1]["title"], tasks[user_choice - 1]["description"]))
-                storage.save(tasks)
-                return
-                    
-            except:
-                for task_index in range(len(tasks)):
-                    if user_choice == tasks[task_index]["title"]:
-                        tasks[task_index]["title"], tasks[task_index]["description"] = self.add("", called_with_edit=(True, tasks[task_index]["title"], tasks[task_index]["description"]))
-                        storage.save(tasks)
-                        return
+        index = self._pick(tasks, "edit")
+        if index is None:
+            return
 
-        else:
-            task_title = " ".join(self.argv[2:])
+        task = tasks[index]
+        task["title"], task["description"] = self._read_edited_task(
+            task["title"], task["description"])
+        storage.save(tasks)
 
-            if task_title == "0":
-                return
-                
-            for task_index in range(len(tasks)):
-                if task_title == tasks[task_index]["title"]:
-                    tasks[task_index]["title"], tasks[task_index]["description"] = self.add("", called_with_edit=(True, tasks[task_index]["title"], tasks[task_index]["description"]))
-                    storage.save(tasks)
-                    return
+    def checkbox(self, command):
+        """check / done mark a task as done; uncheck / undone undo it."""
+        done = command in ("check", "done")
 
-            try:        
-                tasks[int(self.argv[2]) - 1]["title"], tasks[int(self.argv[2]) - 1]["description"] = self.add("", called_with_edit=(True, tasks[int(self.argv[2]) - 1]["title"], tasks[int(self.argv[2]) - 1]["description"]))
-                storage.save(tasks)
-                return
-
-            except:
-                print("This task doesn't exist!!")
-                return
-
-    
-    def checkbox(self, command): 
         tasks = storage.load()
-        if command in ["check", "done"]:
-            if len(self.argv) < 3:
-                self.show()
-                user_choice = input_handler.input_handler(question="Which task do you want to cheked: ", Type="str", options=[storage.load("len"), storage.load("title")], auto_prevention="", default=0, option_error_massage="\n This task doesn't exist!! - Expected tasks: ")
-                
-                try:
-                    user_choice = int(user_choice)
-                    if user_choice == 0:
-                        return
-                    
-                    tasks[user_choice - 1]["task_done"] = True
-                    storage.save(tasks)
-                    return
-                    
-                except:
-                    for task_index in range(len(tasks)):
-                        if user_choice == tasks[task_index]["title"]:
-                            tasks[task_index]["task_done"] = True
-                            storage.save(tasks)
-                            return
+        index = self._pick(tasks, "check" if done else "uncheck")
+        if index is None:
+            return
 
-            else:
-                task_title = " ".join(self.argv[2:])
-
-                if task_title == "0":
-                    return
-                
-                for task_index in range(len(tasks)):
-                    if task_title == tasks[task_index]["title"]:
-                        tasks[task_index]["task_done"] = True
-                        storage.save(tasks)
-                        return
-
-                try:        
-                    tasks[int(self.argv[2]) - 1]["task_done"] = True
-                    storage.save(tasks)
-                    return
-
-                except:
-                    print("This task doesn't exist!!")
-                    return
-
-        else:
-            if len(self.argv) < 3:
-                self.show()
-                user_choice = input_handler.input_handler(question="Which task do you want to uncheked: ", Type="str", options=[storage.load("len"), storage.load("title")], auto_prevention="", default=0, option_error_massage="\n This task doesn't exist!! - Expected tasks: ")
-                
-                try:
-                    user_choice = int(user_choice)
-                    if user_choice == 0:
-                        return
-                    
-                    tasks[user_choice - 1]["task_done"] = False
-                    storage.save(tasks)
-                    return
-                    
-                except:
-                    for task_index in range(len(tasks)):
-                        if user_choice == tasks[task_index]["title"]:
-                            tasks[task_index]["task_done"] = False
-                            storage.save(tasks)
-                            return
-
-            else:
-                task_title = " ".join(self.argv[2:])
-
-                if task_title == "0":
-                    return
-                
-                for task_index in range(len(tasks)):
-                    if task_title == tasks[task_index]["title"]:
-                        tasks[task_index]["task_done"] = False
-                        storage.save(tasks)
-                        return
-
-                try:        
-                    tasks[int(self.argv[2]) - 1]["task_done"] = False
-                    storage.save(tasks)
-                    return
-
-                except:
-                    print("This task doesn't exist!!")
-                    return  
+        tasks[index]["task_done"] = done
+        storage.save(tasks)
 
     def show(self):
-        task_list = storage.load()
-        for task_index in range(len(task_list)):
+        tasks = storage.load()
+        if not tasks:
+            print("No task added!!!")
+            return
 
-            print(f'{task_index+1}-', end="")
-            print(task_list[task_index]["title"], end="")
-            if task_list[task_index]["task_done"] == True:
-                print(" ✅", end="\t\t")
-            
-            else:
-                print("", end="\t\t")
-
-            print(task_list[task_index]["description"])
-            print()
+        display.print_tasks(tasks)
 
     def move(self):
+        """move / mv put a task at a new position; amove / amv swap two tasks."""
         tasks = storage.load()
-        titles = storage.load("title")
+        if not tasks:
+            print("No task added!!!")
+            return
 
-        if len(self.argv) < 3:
+        # Anything missing from the command line is asked for.
+        if len(self.argv) < 4:
             self.show()
-            user_choice = input_handler.input_handler(question="Which task do you want to move: ", Type="str", options=[storage.load("len"), storage.load("title")], auto_prevention="", default=0, option_error_massage="\n This task doesn't exist!! - Expected tasks: ")
-            position = input_handler.input_handler(question="Where you want put your task: ", Type="str", options=[storage.load("len"), storage.load("title")], auto_prevention="", default=0, option_error_massage="\n This task doesn't exist!! - Expected tasks:")            
 
+        source = (self.argv[2] if len(self.argv) > 2
+                  else self._ask("Which task do you want to move: ", tasks))
+        target = (self.argv[3] if len(self.argv) > 3
+                  else self._ask("Where you want put your task: ", tasks))
+
+        source = self._resolve(tasks, source)
+        if source is None:
+            return
+
+        target = self._resolve(tasks, target)
+        if target is None:
+            return
+
+        if self.argv[1] in ("amove", "amv"):
+            tasks[source], tasks[target] = tasks[target], tasks[source]
         else:
-            user_choice = self.argv[2]
-            position = self.argv[3]
+            tasks.insert(target, tasks.pop(source))
 
-            try:
-                user_choice = int(user_choice)
-                if user_choice == 0:
-                    return
-                
-                try:
-                    position = int(position)
-                    if self.argv[1] == "amove" or self.argv[1] == "amv":
-                        tasks[user_choice - 1], tasks[position - 1] = tasks[position - 1], tasks[user_choice - 1]
-                        storage.save(tasks)
-                    else:                    
-                        tasks.insert(position - 1, tasks.pop(user_choice - 1))
+        storage.save(tasks)
 
-                    storage.save(tasks)
-                    return
-                
-                except:
-                    if self.argv[1] == "amove" or self.argv[1] == "amv":
-                        tasks[user_choice - 1], tasks[titles.index(position)] = tasks[titles.index(position)], tasks[user_choice - 1]
+    # ------------------------------------------------------------------
+    # Dispatching
+    # ------------------------------------------------------------------
 
-                    else:
-                        tasks.insert(titles.index(position), tasks.pop(user_choice - 1))
-
-                    storage.save(tasks)
-                    return
-            except:
-                try:
-                    position = int(position)
-                    if self.argv[1] == "amove" or self.argv[1] == "amv":
-                        tasks[titles.index(user_choice)], tasks[position - 1] = tasks[position - 1], tasks[titles.index(user_choice)]
-
-                    else:
-                        tasks.insert(position - 1, tasks.pop(titles.index(user_choice)))
-
-                    storage.save(tasks)
-                    return
-                
-                except:
-                    if self.argv[1] == "amove" or self.argv[1] == "amv":
-                        tasks[titles.index(user_choice)], tasks[titles.index(position)] = tasks[titles.index(position)], tasks[titles.index(user_choice)]
-
-                    else:
-                        tasks.insert(titles.index(position), tasks.pop(titles.index(user_choice)))
-
-                    storage.save(tasks)
-                    return
-        # else:
-        #     if self.argv[2] == "0":
-        #         return
-
-        #     user_choice = self.argv[2]
-        #     position = self.argv[3]
-
-        #     try:
-        #         user_choice = int(user_choice)
-                
-        #         try:
-        #             position = int(position)
-        #             tasks.insert(position - 1, tasks.pop(user_choice - 1))
-        #             storage.save(tasks)
-        #             return
-
-        #         except:
-        #             tasks.insert(titles.index(position), tasks.pop(user_choice - 1))
-        #             storage.save(tasks)
-        #             return
-                    
-        #     except:
-        #         try:
-        #             position = int(position)
-        #             tasks.insert(position - 1, tasks.pop(titles.index(user_choice)))
-        #             storage.save(tasks)
-        #             return
-
-        #         except:
-        #             tasks.insert(titles.index(position), tasks.pop(titles.index(user_choice)))
-        #             storage.save(tasks)
-        #             return
-                    
-        
-    
     def run(self):
-        task = Default()
-        
-        task_dict = {
-            "title"      :None,
-            "description":None,
-            "adding date":None,
-            "task_done":False,
-            "task_id":None,
-        }
-
         if len(self.argv) < 2:
             print("Usage: task <command>")
             return
-        
-        else:
-            it_is = False
-            for cmd in self.commands.values():
-                if self.argv[1] in cmd:
-                    command = self.argv[1]
-                    it_is = True
-                    break
 
-            if not it_is:
-                print(self.argv[1].rstrip() + " command not found!!")
-                return
+        command = self.argv[1]
 
-        if command in self.commands["add"]:
-            task.title, task.description = self.add(command)
+        # Find which command group the typed word belongs to.
+        group = next((name for name, words in self.commands.items()
+                      if command in words), None)
 
-            task_dict["title"] = task.title
-            task_dict["description"] = task.description
-            task_dict["adding date"] = task.adding_date
+        if group is None:
+            print(command.rstrip() + " command not found!!")
+            return
 
-            storage.save(task_dict)
+        handlers = {
+            "add": lambda: self.add(command),
+            "remove": self.delete,
+            "edit": self.edit,
+            "checkbox": lambda: self.checkbox(command),
+            "move": self.move,
+            "show": self.show,
+            "backup": lambda: storage.backup(command),
+            "import": lambda: storage.imp(command),
+        }
+        handlers[group]()
 
-        elif command in self.commands["show"]:
-            self.show()
-
-        elif command in self.commands["edit"]:
-            self.edit()
-
-        elif command in self.commands["remove"]:
-            self.delete()
-
-        elif command in self.commands["checkbox"]:
-            self.checkbox(command)
-
-        elif command in self.commands["backup"]:
-            storage.backup(command)
-
-        elif command in self.commands["import"]:
-            storage.imp(command)
-
-        elif command in self.commands["move"]:
-            self.move()
 
 def main():
     TooDoo(sys.argv).run()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,120 +1,107 @@
+"""Storage layer: keeps the tasks in a JSON file and handles backup / import."""
 import json
-from pathlib import Path
 import shutil
+from pathlib import Path
 
-file_name = "tasks.txt"
+DATA_DIR = Path.home() / ".config" / "TooDoo"
+TASKS_FILE = DATA_DIR / "tasks.txt"
+BACKUP_NAME = "TooDoo.backup.Jaraare"
 
-def save(task):
-    tasks = []    
-    path = Path.home() / ".config/TooDoo"
-    path.mkdir(parents=False, exist_ok=True)
-    path = path / file_name
 
-    if path.exists():
-        task_list = load()
-        
-        for task_element in task_list:
-            tasks.append(task_element)
+# ---------------------------------------------------------------------------
+# Reading and writing tasks
+# ---------------------------------------------------------------------------
 
-    if type(task) == dict:
-        with path.open("w", encoding="utf-8") as file:
-            tasks.append(task)
-            tasks = json.dumps(tasks)
-            file.write(tasks)
-    else:
-        with path.open("w", encoding="utf-8") as file:
-            tasks = json.dumps(task)
-            file.write(tasks)
+def load():
+    """Return the list of saved tasks (an empty list if nothing is saved yet)."""
+    if not TASKS_FILE.exists():
+        return []
 
-def backup(command):
-    if command == "-b":
-        path = Path.home() / ".config/TooDoo/tasks.txt"
-        save_path = Path.home() / "TooDoo.backup.Jaraare"
-        shutil.copy2(path, save_path)
-        print(f"Backup is saved in {save_path / "TooDoo.backup.Jaraare"}")
-        return
+    return json.loads(TASKS_FILE.read_text(encoding="utf-8"))
 
-    while True:
-        save_path = input("Where you want save your backup: ")
-        if not save_path:
-            save_path = Path.home()
 
-        elif save_path[0] == "~":
-            save_path = save_path.replace("~", str(Path.home()), 1)
-            save_path = Path(save_path)
+def save(tasks):
+    """Overwrite the task file with the given list of tasks."""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    TASKS_FILE.write_text(json.dumps(tasks), encoding="utf-8")
 
-        elif save_path == "0":
-            return
-        
-        else:
-            save_path = Path(save_path)
 
-        path = Path.home() / ".config/TooDoo/tasks.txt"
-        if save_path.exists():
-            shutil.copy2(path, save_path / "TooDoo.backup.Jaraare")
+def append(task):
+    """Add one task (a dict) to the end of the saved tasks."""
+    tasks = load()
+    tasks.append(task)
+    save(tasks)
 
-            print(f"Backup is saved in {save_path / "TooDoo.backup.Jaraare"}")
-            return
 
-        else:
-            print("Path doesn't exist!!!")
+# ---------------------------------------------------------------------------
+# Backup and import
+# ---------------------------------------------------------------------------
 
-def imp(command):
-    if command == "-i":
-        save_path = Path.home() / "TooDoo.backup.Jaraare"
-        shutil.move(save_path, Path.home() / ".config/TooDoo/tasks.txt")
-        print("Import succsed!!")
-        return
-    
-    while True:
-        save_path = input("Where your backup are saved: ")
-        if not save_path:
-            save_path = Path.home()
+def _ask_directory(question):
+    """Ask for a directory. Enter = home folder, "0" = cancel (returns None)."""
+    answer = input(question).strip()
 
-        elif save_path[0] == "~":
-            save_path = save_path.replace("~", str(Path.home()), 1)
-            save_path = Path(save_path)
-
-        elif save_path == "0":
-            return
-
-        else:
-            save_path = Path(save_path)
-
-        save_path = save_path / "TooDoo.backup.Jaraare"
-        if save_path.exists():
-            shutil.move(save_path, Path.home() / ".config/TooDoo/tasks.txt")
-
-            print("Import succsed!!")
-            return
-
-        else:
-            print("File doesn't exist!!!")
-
-def load(what_you_want="task"):
-    path = Path.home() / ".config/TooDoo/" / file_name
-
-    if path.exists():
-        with open(path) as file:
-            task_list = json.loads(file.read())
-
-        match what_you_want:
-            case "task":
-                return task_list
-
-            case "len":
-                return len(task_list)
-
-            case "title":
-                task_title_list = [task["title"] for task in task_list]
-
-                return task_title_list
-
-    elif not task_list:
-        print("No task is here!!!")
-        
+    if answer == "0":
         return None
 
-    print("No task added!!!")
+    if not answer:
+        return Path.home()
 
-    return None
+    return Path(answer).expanduser()  # also understands "~" and "~/folder"
+
+
+def backup(command):
+    """Copy the task file to a backup file.
+
+    "-b" saves straight into the home folder; otherwise the user is asked
+    where to save it.
+    """
+    if not TASKS_FILE.exists():
+        print("No task added!!!")
+        return
+
+    if command == "-b":
+        folder = Path.home()
+
+    else:
+        while True:
+            folder = _ask_directory("Where you want save your backup: ")
+            if folder is None:
+                return
+
+            if folder.is_dir():
+                break
+
+            print("Path doesn't exist!!!")
+
+    shutil.copy2(TASKS_FILE, folder / BACKUP_NAME)
+    print(f"Backup is saved in {folder / BACKUP_NAME}")
+
+
+def imp(command):
+    """Restore the tasks from a backup file (the backup file is moved, not copied).
+
+    "-i" looks for the backup in the home folder; otherwise the user is asked
+    where it is.
+    """
+    if command == "-i":
+        source = Path.home() / BACKUP_NAME
+        if not source.exists():
+            print("File doesn't exist!!!")
+            return
+
+    else:
+        while True:
+            folder = _ask_directory("Where your backup are saved: ")
+            if folder is None:
+                return
+
+            source = folder / BACKUP_NAME
+            if source.exists():
+                break
+
+            print("File doesn't exist!!!")
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    shutil.move(source, TASKS_FILE)
+    print("Import succeeded!!")
